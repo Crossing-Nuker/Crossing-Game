@@ -1,135 +1,391 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D Roblox Bacon Skin</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/110/three.min.js"></script>
-    <script src="https://threejs.org/examples/js/controls/PointerLockControls.js"></script>
-    <style>
-        body { margin: 0; overflow: hidden; }
-        canvas { display: block; }
-        #startButton {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            padding: 20px 40px;
-            font-size: 20px;
-            cursor: pointer;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>3D Spiel</title>
+  <style>
+    body, html {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      height: 100%;
+    }
+    canvas {
+      display: block;
+    }
+    #menuButton {
+      position: absolute;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 10px 20px;
+      font-size: 18px;
+      background: rgba(0, 0, 0, 0.7);
+      color: white;
+      border: none;
+      cursor: pointer;
+      border-radius: 5px;
+    }
+    #mouseButton {
+      position: absolute;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 60px;
+      height: 50px;
+      background: rgba(255, 255, 255, 0.8);
+      border-radius: 10px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+      border: none;
+    }
+    #mouseIcon {
+      font-size: 25px;
+      margin-bottom: 2px;
+    }
+    #mouseLabel {
+      font-weight: bold;
+      color: #FF5733;
+      font-size: 16px;
+    }
+    #controlMenu {
+      display: none;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 300px;
+      padding: 20px;
+      border-radius: 10px;
+      font-family: Arial, sans-serif;
+      background: linear-gradient(45deg, purple, pink, lightblue, white);
+      color: black;
+      text-align: center;
+      box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.5);
+    }
+    #controlMenu h2 {
+      margin-top: 0;
+      text-decoration: underline;
+    }
+    #controlMenu ul {
+      list-style: none;
+      padding: 0;
+    }
+    #controlMenu ul li {
+      margin: 5px 0;
+    }
+    #closeButton {
+      margin-top: 15px;
+      padding: 5px 10px;
+      background: red;
+      color: white;
+      border: none;
+      cursor: pointer;
+      border-radius: 5px;
+    }
+    #clickCounter {
+      position: absolute;
+      left: 0;
+      top: 50%;
+      transform: translateY(-50%);
+      background: rgba(0, 0, 0, 0.7);
+      color: white;
+      padding: 6px 10px;
+      border-radius: 0 5px 5px 0;
+      font-family: Arial, sans-serif;
+      font-size: 16px;
+      font-weight: bold;
+    }
+  </style>
 </head>
 <body>
-    <button id="startButton">Klicken zum Starten</button>
-    <script>
-        let scene, camera, renderer, controls;
-        let player, velocity, canJump = false;
-        const speed = 0.1;
-        const gravity = 0.02;
-        const keys = { w: false, a: false, s: false, d: false };
+  <button id="menuButton">Steuerung</button>
+  <button id="mouseButton">
+    <div id="mouseIcon">🖱️</div>
+    <div id="mouseLabel">1+</div>
+  </button>
+  <div id="clickCounter">Clicks: 0</div>
+  <div id="controlMenu">
+    <h2>Steuerung</h2>
+    <p><strong>Bewegung</strong></p>
+    <ul>
+      <li>W - nach vorne gehen</li>
+      <li>S - nach hinten gehen</li>
+      <li>A - nach links gehen</li>
+      <li>D - nach rechts gehen</li>
+    </ul>
+    <p><strong>Maus</strong></p>
+    <ul>
+      <li>Halte die linke Maustaste gedrückt und bewege die Maus, um die Sicht zu steuern</li>
+      <li>Die Bewegungsrichtung folgt automatisch der Blickrichtung</li>
+    </ul>
+    <button id="closeButton">Schließen</button>
+  </div>
 
-        function init() {
-            scene = new THREE.Scene();
-            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 100);
-            renderer = new THREE.WebGLRenderer();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-            document.body.appendChild(renderer.domElement);
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script>
+    // Szene, Kamera und Renderer
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    const renderer = new THREE.WebGLRenderer();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    document.body.appendChild(renderer.domElement);
 
-            // Steuerung aktivieren
-            controls = new THREE.PointerLockControls(camera, document.body);
-            document.getElementById("startButton").addEventListener("click", () => {
-                controls.lock();
-                document.getElementById("startButton").style.display = "none";
-            });
+    // Himmel erstellen (blau)
+    scene.background = new THREE.Color(0x87CEEB);
 
-            // Plattform
-            const platformGeometry = new THREE.BoxGeometry(10, 1, 10);
-            const platformMaterial = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
-            const platform = new THREE.Mesh(platformGeometry, platformMaterial);
-            platform.position.y = -0.5;
-            scene.add(platform);
+    // Sonne
+    const sunGeometry = new THREE.SphereGeometry(2, 32, 32);
+    const sunMaterial = new THREE.MeshBasicMaterial({ color: 0xFFFF00 });
+    const sun = new THREE.Mesh(sunGeometry, sunMaterial);
+    sun.position.set(10, 10, 0);
+    scene.add(sun);
 
-            // Spieler (Bacon-Skin)
-            player = new THREE.Group();
+    // Plattform (grau)
+    const platformGeometry = new THREE.BoxGeometry(50, 1, 50);
+    const platformMaterial = new THREE.MeshBasicMaterial({ color: 0x808080 });
+    const platform = new THREE.Mesh(platformGeometry, platformMaterial);
+    platform.position.y = -2;
+    scene.add(platform);
 
-            // Körper
-            const bodyGeometry = new THREE.BoxGeometry(0.6, 1, 0.4);
-            const bodyMaterial = new THREE.MeshBasicMaterial({ color: 0xff8800 });
-            const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
-            player.add(body);
+    // Spieler erstellen
+    const player = new THREE.Group();
 
-            // Kopf
-            const headGeometry = new THREE.BoxGeometry(0.5, 0.5, 0.5);
-            const headMaterial = new THREE.MeshBasicMaterial({ color: 0xffcc99 });
-            const head = new THREE.Mesh(headGeometry, headMaterial);
-            head.position.y = 0.75;
-            player.add(head);
+    const bodyGeometry = new THREE.BoxGeometry(1, 1, 1);
+    const bodyMaterial = new THREE.MeshBasicMaterial({ color: 0xFFFF00 });
+    const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
+    player.add(body);
 
-            // Haare (Bacon Hair)
-            const hairGeometry = new THREE.BoxGeometry(0.55, 0.6, 0.5);
-            const hairMaterial = new THREE.MeshBasicMaterial({ color: 0x8b4513 });
-            const hair = new THREE.Mesh(hairGeometry, hairMaterial);
-            hair.position.y = 1;
-            player.add(hair);
+    // Kopf
+    const headGeometry = new THREE.SphereGeometry(0.5, 32, 32);
+    const headMaterial = new THREE.MeshBasicMaterial({ color: 0xFFFF00 });
+    const head = new THREE.Mesh(headGeometry, headMaterial);
+    head.position.y = 0.75;
+    player.add(head);
 
-            player.position.y = 1;
-            scene.add(player);
+    // T-Shirt (blau)
+    const tshirtGeometry = new THREE.BoxGeometry(1.1, 1, 1.1);
+    const tshirtMaterial = new THREE.MeshBasicMaterial({ color: 0x0000FF });
+    const tshirt = new THREE.Mesh(tshirtGeometry, tshirtMaterial);
+    tshirt.position.y = 0.5;
+    player.add(tshirt);
 
-            velocity = new THREE.Vector3();
+    // Hose (grün)
+    const pantsGeometry = new THREE.BoxGeometry(1, 1, 1);
+    const pantsMaterial = new THREE.MeshBasicMaterial({ color: 0x00FF00 });
+    const pants = new THREE.Mesh(pantsGeometry, pantsMaterial);
+    pants.position.y = -0.5;
+    player.add(pants);
 
-            window.addEventListener("keydown", (event) => {
-                if (event.key === "w") keys.w = true;
-                if (event.key === "a") keys.a = true;
-                if (event.key === "s") keys.s = true;
-                if (event.key === "d") keys.d = true;
-                if (event.key === " " && canJump) {
-                    velocity.y = 0.1;
-                    canJump = false;
-                }
-            });
+    // Augen
+    const eyeGeometry = new THREE.SphereGeometry(0.1, 32, 32);
+    const eyeMaterial = new THREE.MeshBasicMaterial({ color: 0x000000 });
+    const leftEye = new THREE.Mesh(eyeGeometry, eyeMaterial);
+    leftEye.position.set(-0.2, 1.1, 0.4);
+    const rightEye = new THREE.Mesh(eyeGeometry, eyeMaterial);
+    rightEye.position.set(0.2, 1.1, 0.4);
+    head.add(leftEye, rightEye);
 
-            window.addEventListener("keyup", (event) => {
-                if (event.key === "w") keys.w = false;
-                if (event.key === "a") keys.a = false;
-                if (event.key === "s") keys.s = false;
-                if (event.key === "d") keys.d = false;
-            });
+    scene.add(player);
 
-            animate();
+    // Steuerung
+    let velocity = new THREE.Vector3();
+    let yaw = 0;
+    let pitch = 0;
+    const gravity = -0.1;
+    let isJumping = false;
+    let mouseLocked = false;
+
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "w") velocity.z = -0.1;
+      if (event.key === "s") velocity.z = 0.1;
+      if (event.key === "a") velocity.x = -0.1;
+      if (event.key === "d") velocity.x = 0.1;
+      if (event.key === " ") isJumping = true;
+    });
+
+    document.addEventListener("keyup", (event) => {
+      if (["w", "s"].includes(event.key)) velocity.z = 0;
+      if (["a", "d"].includes(event.key)) velocity.x = 0;
+    });
+    
+    // Einfache Maussteuerung ohne Pointer Lock API
+    let isMouseDown = false;
+    let lastMouseX = 0;
+    let lastMouseY = 0;
+    
+    // Mausklick-Event für die Kamerasteuerung
+    renderer.domElement.addEventListener('mousedown', function(event) {
+      isMouseDown = true;
+      lastMouseX = event.clientX;
+      lastMouseY = event.clientY;
+      console.log("Mausklick: Kamerasteuerung aktiviert");
+    });
+    
+    // Maus loslassen - Kamerasteuerung deaktivieren
+    document.addEventListener('mouseup', function() {
+      isMouseDown = false;
+      console.log("Mausklick: Kamerasteuerung deaktiviert");
+    });
+    
+    // Mausbewegung für die Kamerarotation
+    document.addEventListener('mousemove', function(event) {
+      if (!isMouseDown) return;
+      
+      // Berechnung der Mausbewegung seit dem letzten Frame
+      const deltaX = event.clientX - lastMouseX;
+      const deltaY = event.clientY - lastMouseY;
+      
+      // Mausbewegung in Kamerarotation umwandeln
+      // Negative Werte für natürlichere Steuerung
+      yaw -= deltaX * 0.005;
+      
+      // Nur vertikale Bewegung für Pitch verwenden, nicht von horizontaler Rotation beeinflusst
+      pitch -= deltaY * 0.005;
+      
+      // Vertikal begrenzen, damit man nicht überkopf schauen kann
+      pitch = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, pitch));
+      
+      // Mausposition für den nächsten Frame speichern
+      lastMouseX = event.clientX;
+      lastMouseY = event.clientY;
+    });
+    
+    // Sicherstellen, dass die Steuerung beendet wird, wenn die Maus das Fenster verlässt
+    document.addEventListener('mouseleave', function() {
+      isMouseDown = false;
+    });
+
+    function applyPhysics() {
+      // Bewegungsrichtung basierend auf der Kamerarotation
+      const direction = new THREE.Vector3(0, 0, 0);
+      
+      if (velocity.z !== 0) {
+        direction.x += velocity.z * Math.sin(yaw);
+        direction.z += velocity.z * Math.cos(yaw);
+      }
+      
+      if (velocity.x !== 0) {
+        direction.x += velocity.x * Math.cos(yaw);
+        direction.z -= velocity.x * Math.sin(yaw);
+      }
+      
+      player.position.add(direction);
+      
+      // Spielerrotation der Kamera anpassen
+      player.rotation.y = yaw;
+
+      if (player.position.y > -1) {
+        velocity.y += gravity;
+        player.position.y += velocity.y;
+      } else {
+        player.position.y = -1;
+        velocity.y = 0;
+        isJumping = false;
+      }
+
+      if (player.position.y < -2) resetPlayer();
+
+      // Kamera hinter dem Spieler positionieren - nur horizontale Rotation
+      const cameraOffset = new THREE.Vector3(0, 2, 5);
+      cameraOffset.applyAxisAngle(new THREE.Vector3(0, 1, 0), yaw);
+      
+      camera.position.copy(player.position).add(cameraOffset);
+      
+      // Erst Kamera auf den Spieler ausrichten (für yaw/horizontale Drehung)
+      const targetPosition = new THREE.Vector3();
+      targetPosition.copy(player.position);
+      targetPosition.y = player.position.y + 1; // Ziel auf Augenhöhe
+      
+      // Kamera schaut erst in Richtung des Spielers (horizontale Rotation)
+      camera.lookAt(targetPosition);
+      
+      // Dann nur die vertikale Rotation (pitch) separat anwenden
+      const euler = new THREE.Euler(0, 0, 0, 'YXZ');
+      euler.setFromQuaternion(camera.quaternion);
+      euler.x = pitch; // Nur vertikale Drehung (Pitch) anwenden
+      camera.quaternion.setFromEuler(euler);
+
+      renderer.render(scene, camera);
+    }
+
+    function resetPlayer() {
+      player.position.set(0, -1, 0);
+      velocity.set(0, 0, 0);
+    }
+
+    function animate() {
+      requestAnimationFrame(animate);
+      applyPhysics();
+    }
+
+    animate();
+
+    // Menü-Button-Logik
+    document.getElementById("menuButton").addEventListener("click", () => {
+      document.getElementById("controlMenu").style.display = "block";
+    });
+
+    document.getElementById("closeButton").addEventListener("click", () => {
+      document.getElementById("controlMenu").style.display = "none";
+    });
+    
+    // Klick-Zähler Variable
+    let clickCount = 0;
+    
+    // Maus-Button-Logik und Animation
+    document.getElementById("mouseButton").addEventListener("click", () => {
+      console.log("Maus-Button angeklickt");
+      
+      // Klick-Zähler erhöhen und Anzeige aktualisieren
+      clickCount++;
+      document.getElementById("clickCounter").textContent = `Clicks: ${clickCount}`;
+      
+      // Erstelle ein neues Element für die 1+ Animation
+      const floatingText = document.createElement("div");
+      floatingText.textContent = "1+";
+      floatingText.style.position = "absolute";
+      floatingText.style.color = "#FF5733";
+      floatingText.style.fontWeight = "bold";
+      floatingText.style.fontSize = "20px";
+      floatingText.style.pointerEvents = "none"; // Verhindert, dass das Element Mausklicks blockiert
+      
+      // Position am Maus-Button starten
+      const buttonRect = document.getElementById("mouseButton").getBoundingClientRect();
+      floatingText.style.left = (buttonRect.left + buttonRect.width / 2 - 10) + "px";
+      floatingText.style.top = (buttonRect.top + 10) + "px";
+      
+      // Element zum Body hinzufügen
+      document.body.appendChild(floatingText);
+      
+      // Animation starten
+      let yPos = parseFloat(floatingText.style.top);
+      let opacity = 1.0;
+      
+      const animateText = () => {
+        yPos -= 1.5; // Nach oben bewegen
+        opacity -= 0.015; // Langsam ausblenden
+        
+        floatingText.style.top = yPos + "px";
+        floatingText.style.opacity = opacity;
+        
+        if (opacity > 0) {
+          // Animation fortsetzen
+          requestAnimationFrame(animateText);
+        } else {
+          // Element entfernen, wenn Animation abgeschlossen ist
+          document.body.removeChild(floatingText);
         }
-
-        function animate() {
-            requestAnimationFrame(animate);
-
-            // Bewegung
-            const direction = new THREE.Vector3();
-            if (keys.w) direction.z -= speed;
-            if (keys.s) direction.z += speed;
-            if (keys.a) direction.x -= speed;
-            if (keys.d) direction.x += speed;
-            direction.applyQuaternion(camera.quaternion);
-            player.position.add(direction);
-
-            // Schwerkraft
-            velocity.y -= gravity;
-            player.position.y += velocity.y;
-
-            // Boden Kollision
-            if (player.position.y <= 1) {
-                player.position.y = 1;
-                velocity.y = 0;
-                canJump = true;
-            }
-
-            // Kamera folgt Spieler
-            camera.position.copy(player.position);
-            camera.position.y += 0.8;
-
-            renderer.render(scene, camera);
-        }
-
-        init();
-    </script>
+      };
+      
+      // Animation starten
+      requestAnimationFrame(animateText);
+    });
+  </script>
 </body>
 </html>

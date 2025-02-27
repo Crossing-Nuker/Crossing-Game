@@ -1,1 +1,135 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Roblox Bacon Skin</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/110/three.min.js"></script>
+    <script src="https://threejs.org/examples/js/controls/PointerLockControls.js"></script>
+    <style>
+        body { margin: 0; overflow: hidden; }
+        canvas { display: block; }
+        #startButton {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            padding: 20px 40px;
+            font-size: 20px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <button id="startButton">Klicken zum Starten</button>
+    <script>
+        let scene, camera, renderer, controls;
+        let player, velocity, canJump = false;
+        const speed = 0.1;
+        const gravity = 0.02;
+        const keys = { w: false, a: false, s: false, d: false };
 
+        function init() {
+            scene = new THREE.Scene();
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 100);
+            renderer = new THREE.WebGLRenderer();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            document.body.appendChild(renderer.domElement);
+
+            // Steuerung aktivieren
+            controls = new THREE.PointerLockControls(camera, document.body);
+            document.getElementById("startButton").addEventListener("click", () => {
+                controls.lock();
+                document.getElementById("startButton").style.display = "none";
+            });
+
+            // Plattform
+            const platformGeometry = new THREE.BoxGeometry(10, 1, 10);
+            const platformMaterial = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+            const platform = new THREE.Mesh(platformGeometry, platformMaterial);
+            platform.position.y = -0.5;
+            scene.add(platform);
+
+            // Spieler (Bacon-Skin)
+            player = new THREE.Group();
+
+            // Körper
+            const bodyGeometry = new THREE.BoxGeometry(0.6, 1, 0.4);
+            const bodyMaterial = new THREE.MeshBasicMaterial({ color: 0xff8800 });
+            const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
+            player.add(body);
+
+            // Kopf
+            const headGeometry = new THREE.BoxGeometry(0.5, 0.5, 0.5);
+            const headMaterial = new THREE.MeshBasicMaterial({ color: 0xffcc99 });
+            const head = new THREE.Mesh(headGeometry, headMaterial);
+            head.position.y = 0.75;
+            player.add(head);
+
+            // Haare (Bacon Hair)
+            const hairGeometry = new THREE.BoxGeometry(0.55, 0.6, 0.5);
+            const hairMaterial = new THREE.MeshBasicMaterial({ color: 0x8b4513 });
+            const hair = new THREE.Mesh(hairGeometry, hairMaterial);
+            hair.position.y = 1;
+            player.add(hair);
+
+            player.position.y = 1;
+            scene.add(player);
+
+            velocity = new THREE.Vector3();
+
+            window.addEventListener("keydown", (event) => {
+                if (event.key === "w") keys.w = true;
+                if (event.key === "a") keys.a = true;
+                if (event.key === "s") keys.s = true;
+                if (event.key === "d") keys.d = true;
+                if (event.key === " " && canJump) {
+                    velocity.y = 0.1;
+                    canJump = false;
+                }
+            });
+
+            window.addEventListener("keyup", (event) => {
+                if (event.key === "w") keys.w = false;
+                if (event.key === "a") keys.a = false;
+                if (event.key === "s") keys.s = false;
+                if (event.key === "d") keys.d = false;
+            });
+
+            animate();
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            // Bewegung
+            const direction = new THREE.Vector3();
+            if (keys.w) direction.z -= speed;
+            if (keys.s) direction.z += speed;
+            if (keys.a) direction.x -= speed;
+            if (keys.d) direction.x += speed;
+            direction.applyQuaternion(camera.quaternion);
+            player.position.add(direction);
+
+            // Schwerkraft
+            velocity.y -= gravity;
+            player.position.y += velocity.y;
+
+            // Boden Kollision
+            if (player.position.y <= 1) {
+                player.position.y = 1;
+                velocity.y = 0;
+                canJump = true;
+            }
+
+            // Kamera folgt Spieler
+            camera.position.copy(player.position);
+            camera.position.y += 0.8;
+
+            renderer.render(scene, camera);
+        }
+
+        init();
+    </script>
+</body>
+</html>
